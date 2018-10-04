@@ -205,7 +205,7 @@ data "azurerm_builtin_role_definition" "builtin_role_definition" {
 resource "azurerm_role_assignment" "role_assignment" {
   scope              = "${data.azurerm_subscription.subscription.id}"
   role_definition_id = "${data.azurerm_subscription.subscription.id}${data.azurerm_builtin_role_definition.builtin_role_definition.id}"
-  principal_id       = "${lookup(azurerm_virtual_machine.main.identity[0], "principal_id")}"
+  principal_id       = "${azurerm_azuread_service_principal.vaultapp.id}"
 
   lifecycle {
     ignore_changes = ["name"]

@@ -16,7 +16,10 @@ vault write aws/roles/s3-role credential_type=iam_user policy_document=-<<EOF
     {
       "Effect": "Allow",
       "Action": "s3:*",
-      "Resource": "arn:aws:s3:::$4/*"
+      "Resource": [
+        "arn:aws:s3:::$4",
+        "arn:aws:s3:::$4/*"
+      ]
     }
   ]
 }
