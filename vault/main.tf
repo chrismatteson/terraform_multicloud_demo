@@ -1,6 +1,7 @@
 provider "azurerm" {}
+
 provider "aws" {
-  region     = "${var.aws_region}"
+  region = "${var.aws_region}"
 }
 
 # generate random project name
@@ -76,7 +77,7 @@ resource "azurerm_resource_group" "main" {
 }
 
 resource "azurerm_azuread_application" "vaultapp" {
-  name                       = "${random_id.project_name.hex}-vaultapp"
+  name = "${random_id.project_name.hex}-vaultapp"
 }
 
 resource "azurerm_azuread_service_principal" "vaultapp" {
@@ -85,7 +86,7 @@ resource "azurerm_azuread_service_principal" "vaultapp" {
 
 resource "azurerm_azuread_service_principal_password" "vaultapp" {
   service_principal_id = "${azurerm_azuread_service_principal.vaultapp.id}"
-  value                = "${random_id.client_secret.id}" 
+  value                = "${random_id.client_secret.id}"
   end_date             = "2020-01-01T01:02:03Z"
 }
 
@@ -160,9 +161,9 @@ resource "azurerm_virtual_machine" "main" {
   }
 
   connection {
-    type = "ssh"
-    host = "${azurerm_public_ip.main.ip_address}"
-    user = "ubuntu"
+    type     = "ssh"
+    host     = "${azurerm_public_ip.main.ip_address}"
+    user     = "ubuntu"
     password = "Password1234!"
   }
 
@@ -171,10 +172,10 @@ resource "azurerm_virtual_machine" "main" {
     destination = "/tmp/setupvault.sh"
   }
 
-  provisioner "remote-exec" {    
+  provisioner "remote-exec" {
     inline = [
       "chmod +x /tmp/setupvault.sh",
-      "/tmp/setupvault.sh ${aws_iam_access_key.vault.id} ${aws_iam_access_key.vault.secret} ${var.aws_region} ${aws_s3_bucket.appdata.bucket} ${data.azurerm_client_config.current.tenant_id} ${azurerm_azuread_application.vaultapp.application_id} ${azurerm_azuread_service_principal_password.vaultapp.value} ${data.azurerm_client_config.current.subscription_id} ${azurerm_resource_group.main.name}"
+      "/tmp/setupvault.sh ${aws_iam_access_key.vault.id} ${aws_iam_access_key.vault.secret} ${var.aws_region} ${aws_s3_bucket.appdata.bucket} ${data.azurerm_client_config.current.tenant_id} ${azurerm_azuread_application.vaultapp.application_id} ${azurerm_azuread_service_principal_password.vaultapp.value} ${data.azurerm_client_config.current.subscription_id} ${azurerm_resource_group.main.name}",
     ]
   }
 }
