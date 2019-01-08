@@ -125,12 +125,32 @@ resource "azurerm_network_interface" "main" {
   }
 }
 
+data "template_file" "setup" {
+  template = "${file("setupvault.tpl")}"
+
+  vars {
+    aws_iam_access_key    = "${aws_iam_access_key.vault.id}"
+    aws_iam_secret_key    = "${aws_iam_access_key.vault.secret}"
+    aws_region            = "${var.aws_region}"
+    aws_s3_bucket         = "${aws_s3_bucket.appdata.bucket}"
+    azure_tenant_id       = "${data.azurerm_client_config.current.tenant_id}"
+    azure_application_id  = "${azurerm_azuread_application.vaultapp.application_id}"
+    azure_sp_password     = "${azurerm_azuread_service_principal_password.vaultapp.value}"
+    azure_subscription_id = "${data.azurerm_client_config.current.subscription_id}"
+    azure_resource_group  = "${azurerm_resource_group.main.name}"
+    vault_url             = "${var.vault_url}"
+    azure_key_vault_key   = "${azurerm_key_vault_key.seal.name}"
+    azure_key_vault       = "${azurerm_key_vault.autounseal.name}"
+  }
+}
+
 resource "azurerm_virtual_machine" "main" {
-  name                  = "${random_id.project_name.hex}-vm"
-  location              = "${azurerm_resource_group.main.location}"
-  resource_group_name   = "${azurerm_resource_group.main.name}"
-  network_interface_ids = ["${azurerm_network_interface.main.id}"]
-  vm_size               = "Standard_A2_v2"
+  name                          = "${random_id.project_name.hex}-vm"
+  location                      = "${azurerm_resource_group.main.location}"
+  resource_group_name           = "${azurerm_resource_group.main.name}"
+  network_interface_ids         = ["${azurerm_network_interface.main.id}"]
+  vm_size                       = "Standard_A2_v2"
+  delete_os_disk_on_termination = true
 
   identity = {
     type = "SystemAssigned"
@@ -154,6 +174,7 @@ resource "azurerm_virtual_machine" "main" {
     computer_name  = "${random_id.project_name.hex}vm"
     admin_username = "ubuntu"
     admin_password = "Password1234!"
+    custom_data    = "${data.template_file.setup.rendered}"
   }
 
   os_profile_linux_config {
@@ -165,18 +186,6 @@ resource "azurerm_virtual_machine" "main" {
     host     = "${azurerm_public_ip.main.ip_address}"
     user     = "ubuntu"
     password = "Password1234!"
-  }
-
-  provisioner "file" {
-    source      = "setupvault.sh"
-    destination = "/tmp/setupvault.sh"
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "chmod +x /tmp/setupvault.sh",
-      "/tmp/setupvault.sh ${aws_iam_access_key.vault.id} ${aws_iam_access_key.vault.secret} ${var.aws_region} ${aws_s3_bucket.appdata.bucket} ${data.azurerm_client_config.current.tenant_id} ${azurerm_azuread_application.vaultapp.application_id} ${azurerm_azuread_service_principal_password.vaultapp.value} ${data.azurerm_client_config.current.subscription_id} ${azurerm_resource_group.main.name}",
-    ]
   }
 }
 
@@ -211,4 +220,78 @@ resource "azurerm_role_assignment" "role_assignment" {
   lifecycle {
     ignore_changes = ["name"]
   }
+}
+
+resource "azurerm_key_vault" "autounseal" {
+  name                = "${format("%s%s", "kv", random_id.project_name.hex)}"
+  location            = "${azurerm_resource_group.main.location}"
+  resource_group_name = "${azurerm_resource_group.main.name}"
+  tenant_id           = "${data.azurerm_client_config.current.tenant_id}"
+
+  sku {
+    name = "premium"
+  }
+
+  access_policy {
+    tenant_id = "${data.azurerm_client_config.current.tenant_id}"
+    object_id = "657acd59-4f0f-49e5-a912-e96edae2ac40"
+
+    key_permissions = [
+      "create",
+      "get",
+      "delete",
+    ]
+
+    secret_permissions = [
+      "set",
+      "delete",
+    ]
+  }
+
+  access_policy {
+    tenant_id = "${data.azurerm_client_config.current.tenant_id}"
+    object_id = "${azurerm_azuread_service_principal.vaultapp.id}"
+
+    key_permissions = [
+      "create",
+      "get",
+    ]
+
+    secret_permissions = [
+      "set",
+    ]
+  }
+
+  tags {
+    project = "multicloud_vault_demo"
+  }
+}
+
+provider azurerm {
+  alias           = "service_principal"
+  tenant_id       = "${data.azurerm_client_config.current.tenant_id}"
+  subscription_id = "${data.azurerm_client_config.current.subscription_id}"
+  client_id       = "${azurerm_azuread_service_principal.vaultapp.application_id}"
+  client_secret   = "${azurerm_azuread_service_principal_password.vaultapp.value}"
+}
+
+resource "azurerm_key_vault_key" "seal" {
+  provider  = "azurerm.service_principal"
+  name      = "generated-certificate"
+  vault_uri = "${azurerm_key_vault.autounseal.vault_uri}"
+  key_type  = "RSA"
+  key_size  = 2048
+
+  key_opts = [
+    "decrypt",
+    "encrypt",
+    "sign",
+    "unwrapKey",
+    "verify",
+    "wrapKey",
+  ]
+}
+
+data "azurerm_azuread_application" "test" {
+  name = "testapp"
 }
