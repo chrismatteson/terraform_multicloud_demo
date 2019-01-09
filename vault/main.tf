@@ -88,6 +88,7 @@ resource "azurerm_azuread_service_principal_password" "vaultapp" {
   service_principal_id = "${azurerm_azuread_service_principal.vaultapp.id}"
   value                = "${random_id.client_secret.id}"
   end_date             = "2020-01-01T01:02:03Z"
+  depends_on           = ["azurerm_role_assignment.role_assignment"]
 }
 
 resource "azurerm_virtual_network" "main" {
@@ -290,8 +291,4 @@ resource "azurerm_key_vault_key" "seal" {
     "verify",
     "wrapKey",
   ]
-}
-
-data "azurerm_azuread_application" "test" {
-  name = "testapp"
 }
