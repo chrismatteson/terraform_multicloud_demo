@@ -74,6 +74,10 @@ data "azurerm_client_config" "current" {}
 resource "azurerm_resource_group" "main" {
   name     = "${random_id.project_name.hex}-rg"
   location = "${var.location}"
+
+  tags {
+    DoNotDelete = "true"
+  }
 }
 
 resource "azurerm_azuread_application" "vaultapp" {
@@ -256,9 +260,17 @@ resource "azurerm_key_vault" "autounseal" {
     key_permissions = [
       "create",
       "get",
+      "delete",
+      "decrypt",
+      "encrypt",
+      "unwrapKey",
+      "wrapKey",
+      "verify",
+      "sign",
     ]
 
     secret_permissions = [
+      "get",
       "set",
     ]
   }

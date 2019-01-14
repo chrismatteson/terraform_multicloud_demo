@@ -103,11 +103,11 @@ listener "tcp" {
   tls_disable = 1
 }
 seal "azurekeyvault" {
-  tenant_id      = ${azure_tenant_id}
-  client_id      = ${azure_application_id}
-  client_secret  = ${azure_sp_password}
-  vault_name     = ${azure_key_vault}
-  key_name       = ${azure_key_vault_key}
+  tenant_id      = "${azure_tenant_id}"
+  client_id      = "${azure_application_id}"
+  client_secret  = "${azure_sp_password}"
+  vault_name     = "${azure_key_vault}"
+  key_name       = "${azure_key_vault_key}"
 }
 ui=true
 EOF
