@@ -17,3 +17,7 @@ output "vault-load-creds" {
 output "vault-access-s3" {
   value = "aws s3 --region us-east-2 ls s3://${aws_s3_bucket.appdata.bucket}"
 }
+
+output "vault_token" {
+  value = "${random_id.vault_token.id}"
+}

@@ -13,6 +13,10 @@ resource "random_id" "client_secret" {
   byte_length = 32
 }
 
+resource "random_id" "vault_token" {
+  byte_length = 32
+}
+
 # AWS resources
 
 data "aws_iam_account_alias" "current" {}
@@ -146,6 +150,7 @@ data "template_file" "setup" {
     vault_url             = "${var.vault_url}"
     azure_key_vault_key   = "${azurerm_key_vault_key.seal.name}"
     azure_key_vault       = "${azurerm_key_vault.autounseal.name}"
+    vault_token           = "${random_id.vault_token.id}"
   }
 }
 
@@ -186,11 +191,15 @@ resource "azurerm_virtual_machine" "main" {
     disable_password_authentication = false
   }
 
-  connection {
-    type     = "ssh"
-    host     = "${azurerm_public_ip.main.ip_address}"
-    user     = "ubuntu"
-    password = "Password1234!"
+  #  connection {
+  #    type     = "ssh"
+  #    host     = "${azurerm_public_ip.main.ip_address}"
+  #    user     = "ubuntu"
+  #    password = "Password1234!"
+  #  }
+
+  provisioner "local-exec" {
+    command = "until $(curl --silent --fail http://40.121.33.113:8200/v1/sys/init | jq .initialized ) -eq 'true'; do printf '.'; sleep 2; done"
   }
 }
 
@@ -303,4 +312,14 @@ resource "azurerm_key_vault_key" "seal" {
     "verify",
     "wrapKey",
   ]
+}
+
+provider "vault" {
+  address = "http://${azurerm_public_ip.main.ip_address}:8200"
+  token   = "${random_id.vault_token.id}"
+}
+
+resource "vault_auth_backend" "azure" {
+  type       = "azure"
+  depends_on = ["azurerm_virtual_machine.main"]
 }

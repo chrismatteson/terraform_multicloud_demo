@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo apt-get install -y unzip
+sudo apt-get install -y unzip jq
 # apt-get install -y libtool libltdl-dev 
 
 USER="vault"
@@ -128,6 +128,8 @@ sudo systemctl start vault
 
 sleep 30s
 export VAULT_ADDR=http://127.0.0.1:8200
+export VAULT_TOKEN=`vault operator init -format json | jq -r .root_token`
+vault token create -id=${vault_token}
 vault auth enable azure
 vault secrets enable aws
 vault write aws/config/root access_key=${aws_iam_access_key} secret_key=${aws_iam_secret_key} region=${aws_region}
