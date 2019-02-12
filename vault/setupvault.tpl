@@ -69,7 +69,7 @@ VAULT_URL=${vault_url}
 sudo curl --output /tmp/$${VAULT_ZIP} $${VAULT_URL}
 sudo unzip -o /tmp/$${VAULT_ZIP} -d /usr/local/bin/
 sudo chmod 0755 /usr/local/bin/vault
-sudo hown vault:vault /usr/local/bin/vault
+sudo chown vault:vault /usr/local/bin/vault
 sudo mkdir -pm 0755 /etc/vault.d
 sudo mkdir -pm 0755 /opt/vault
 sudo chown vault:vault /opt/vault
@@ -104,8 +104,6 @@ listener "tcp" {
 }
 seal "azurekeyvault" {
   tenant_id      = "${azure_tenant_id}"
-  client_id      = "${azure_application_id}"
-  client_secret  = "${azure_sp_password}"
   vault_name     = "${azure_key_vault}"
   key_name       = "${azure_key_vault_key}"
 }

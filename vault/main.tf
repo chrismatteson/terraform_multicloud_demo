@@ -148,8 +148,8 @@ data "template_file" "setup" {
     azure_subscription_id = "${data.azurerm_client_config.current.subscription_id}"
     azure_resource_group  = "${azurerm_resource_group.main.name}"
     vault_url             = "${var.vault_url}"
-    azure_key_vault_key   = "${azurerm_key_vault_key.seal.name}"
-    azure_key_vault       = "${azurerm_key_vault.autounseal.name}"
+    azure_key_vault_key   = "generated-certificate"
+    azure_key_vault       = "${format("%s%s", "kv", random_id.project_name.hex)}"
     vault_token           = "${random_id.vault_token.id}"
   }
 }
@@ -190,16 +190,16 @@ resource "azurerm_virtual_machine" "main" {
   os_profile_linux_config {
     disable_password_authentication = false
   }
+}
 
-  #  connection {
-  #    type     = "ssh"
-  #    host     = "${azurerm_public_ip.main.ip_address}"
-  #    user     = "ubuntu"
-  #    password = "Password1234!"
-  #  }
+resource "null_resource" "main" {
+
+  triggers {
+    vault_vm = "${azurerm_virtual_machine.main.id}"
+  }
 
   provisioner "local-exec" {
-    command = "until $(curl --silent --fail http://40.121.33.113:8200/v1/sys/init | jq .initialized ) -eq 'true'; do printf '.'; sleep 2; done"
+    command = "until $(curl --silent --fail http://${azurerm_public_ip.main.ip_address}:8200/v1/sys/init | jq .initialized ) -eq 'true'; do printf '.'; sleep 2; done"
   }
 }
 
@@ -236,6 +236,10 @@ resource "azurerm_role_assignment" "role_assignment" {
   }
 }
 
+#data "azurerm_azuread_service_principal" "vault_vm" {
+#  display_name = "${azurerm_virtual_machine.main.name}"
+#}
+
 resource "azurerm_key_vault" "autounseal" {
   name                = "${format("%s%s", "kv", random_id.project_name.hex)}"
   location            = "${azurerm_resource_group.main.location}"
@@ -246,25 +250,47 @@ resource "azurerm_key_vault" "autounseal" {
     name = "premium"
   }
 
+#  access_policy {
+#    tenant_id = "${data.azurerm_client_config.current.tenant_id}"
+#    object_id = "657acd59-4f0f-49e5-a912-e96edae2ac40"
+#
+#    key_permissions = [
+#      "create",
+#      "get",
+#      "delete",
+#    ]
+#
+#    secret_permissions = [
+#      "set",
+#      "delete",
+#    ]
+#  }
+
   access_policy {
     tenant_id = "${data.azurerm_client_config.current.tenant_id}"
-    object_id = "657acd59-4f0f-49e5-a912-e96edae2ac40"
+    object_id = "${azurerm_azuread_service_principal.vaultapp.id}"
 
     key_permissions = [
       "create",
       "get",
       "delete",
+      "decrypt",
+      "encrypt",
+      "unwrapKey",
+      "wrapKey",
+      "verify",
+      "sign",
     ]
 
     secret_permissions = [
+      "get",
       "set",
-      "delete",
     ]
   }
 
   access_policy {
     tenant_id = "${data.azurerm_client_config.current.tenant_id}"
-    object_id = "${azurerm_azuread_service_principal.vaultapp.id}"
+    object_id = "${azurerm_virtual_machine.main.identity.0.principal_id}"
 
     key_permissions = [
       "create",
@@ -314,12 +340,56 @@ resource "azurerm_key_vault_key" "seal" {
   ]
 }
 
-provider "vault" {
-  address = "http://${azurerm_public_ip.main.ip_address}:8200"
-  token   = "${random_id.vault_token.id}"
-}
+#provider "vault" {
+#  address = "${null_resource.main.id ? "http://${azurerm_public_ip.main.ip_address}:8200" : null_resource.main.id}"
+#  token   = "${null_resource.main.id ? random_id.vault_token.id : null_resource.main.id}"
+#}
 
-resource "vault_auth_backend" "azure" {
-  type       = "azure"
-  depends_on = ["azurerm_virtual_machine.main"]
-}
+#resource "vault_auth_backend" "azure" {
+#  type       = "azure"
+#  depends_on = ["null_resource.main"]
+#}
+
+#resource "vault_aws_secret_backend" "aws" {
+#  access_key = "${aws_iam_access_key.vault.id}"
+#  secret_key = "${aws_iam_access_key.vault.secret}"
+#  region     = "${var.aws_region}"
+#}
+
+#resource "vault_aws_secret_backend_role" "role" {
+#  backend = "${vault_aws_secret_backend.aws.path}"
+#  name    = "s3-role"
+#
+#  policy = <<EOT
+#{
+#  "Version": "2012-10-17",
+#  "Statement": [
+#    {
+#      "Effect": "Allow",
+#      "Action": "s3:*",
+#      "Resource": [
+#        "arn:aws:s3:::${aws_s3_bucket.appdata.bucket}",
+#        "arn:aws:s3:::${aws_s3_bucket.appdata.bucket}/*"
+#      ]
+#    }
+#  ]
+#}
+#EOT
+#}
+
+#resource "vault_policy" "s3" {
+#  name = "s3-policy"
+#
+#  policy = <<EOT
+#path "aws/creds/s3-role" {
+#  capabilities = ["read"]
+#}
+#EOT
+#}
+
+#resource "vault_azure_auth_backend_role" "role" {
+#  role                   = "dev-role"
+#  bound_subscription_ids = ["${data.azurerm_client_config.current.subscription_id}"]
+#  bound_resource_groups  = ["${azurerm_resource_group.main.name}"]
+#  policies = ["s3-policy"]
+#}
