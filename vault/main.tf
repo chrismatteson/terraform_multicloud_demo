@@ -22,8 +22,9 @@ resource "random_id" "vault_token" {
 data "aws_iam_account_alias" "current" {}
 
 resource "aws_s3_bucket" "appdata" {
-  bucket = "${random_id.project_name.hex}-appdata"
-  acl    = "private"
+  bucket        = "${random_id.project_name.hex}-appdata"
+  acl           = "private"
+  force_destroy = true
 
   tags {
     Name        = "Azure-AWS Vault Demo"
@@ -323,22 +324,22 @@ provider azurerm {
   client_secret   = "${azurerm_azuread_service_principal_password.vaultapp.value}"
 }
 
-resource "azurerm_key_vault_key" "seal" {
-  provider  = "azurerm.service_principal"
-  name      = "generated-certificate"
-  vault_uri = "${azurerm_key_vault.autounseal.vault_uri}"
-  key_type  = "RSA"
-  key_size  = 2048
-
-  key_opts = [
-    "decrypt",
-    "encrypt",
-    "sign",
-    "unwrapKey",
-    "verify",
-    "wrapKey",
-  ]
-}
+#resource "azurerm_key_vault_key" "seal" {
+#  provider  = "azurerm.service_principal"
+#  name      = "generated-certificate"
+#  vault_uri = "${azurerm_key_vault.autounseal.vault_uri}"
+#  key_type  = "RSA"
+#  key_size  = 2048
+#
+#  key_opts = [
+#    "decrypt",
+#    "encrypt",
+#    "sign",
+#    "unwrapKey",
+#    "verify",
+#    "wrapKey",
+#  ]
+#}
 
 #provider "vault" {
 #  address = "${null_resource.main.id ? "http://${azurerm_public_ip.main.ip_address}:8200" : null_resource.main.id}"

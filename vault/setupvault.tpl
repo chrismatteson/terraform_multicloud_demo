@@ -124,7 +124,7 @@ EOF
 sudo systemctl enable vault
 sudo systemctl start vault
 
-sleep 30s
+sleep 60s
 export VAULT_ADDR=http://127.0.0.1:8200
 export VAULT_TOKEN=`vault operator init -format json | jq -r .root_token`
 vault token create -id=${vault_token}
