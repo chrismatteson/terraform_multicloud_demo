@@ -7,7 +7,7 @@ output "public-ip" {
 }
 
 output "vault-msi-auth" {
-  value = "vault write auth/azure/login role=\"dev-role\" subscription_id=\"${data.azurerm_client_config.current.subscription_id}\" resource_group_name=\"${azurerm_virtual_machine.main.resource_group_name}\" vm_name=\"${azurerm_virtual_machine.main.name}\" jwt=`curl http://localhost:50342/oauth2/token?resource=https://management.azure.com -H metadata:true | jq .access_token | tr -d '\"'"
+  value = "vault write auth/azure/login role=\"dev-role\" subscription_id=\"${data.azurerm_client_config.current.subscription_id}\" resource_group_name=\"${azurerm_virtual_machine.main.resource_group_name}\" vm_name=\"${azurerm_virtual_machine.main.name}\" jwt=`curl http://localhost:50342/oauth2/token?resource=https://management.azure.com -H metadata:true | jq .access_token | tr -d '\"'`"
 }
 
 output "vault-load-creds" {

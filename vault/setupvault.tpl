@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo apt-get install -y unzip jq
+sudo apt-get install -y unzip jq awscli
 # apt-get install -y libtool libltdl-dev 
 
 USER="vault"
@@ -124,7 +124,7 @@ EOF
 sudo systemctl enable vault
 sudo systemctl start vault
 
-sleep 60s
+sleep 90s
 export VAULT_ADDR=http://127.0.0.1:8200
 export VAULT_TOKEN=`vault operator init -format json | jq -r .root_token`
 vault token create -id=${vault_token}
@@ -152,4 +152,4 @@ path "aws/creds/s3-role" {
   capabilities = ["read"]
 }
 EOF
-vault write auth/azure/role/dev-role policies=\"s3-policy\" bound_subscription_ids=${azure_subscription_id} bound_resource_groups=${azure_resource_group}
+vault write auth/azure/role/dev-role policies="s3-policy" bound_subscription_ids=${azure_subscription_id} bound_resource_groups=${azure_resource_group}
