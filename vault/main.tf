@@ -138,7 +138,7 @@ resource "azurerm_network_interface" "main" {
 data "template_file" "setup" {
   template = "${file("setupvault.tpl")}"
 
-  vars {
+  vars = {
     aws_iam_access_key    = "${aws_iam_access_key.vault.id}"
     aws_iam_secret_key    = "${aws_iam_access_key.vault.secret}"
     aws_region            = "${var.aws_region}"
